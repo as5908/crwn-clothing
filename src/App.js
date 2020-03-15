@@ -6,7 +6,7 @@ import HomePage from './pages/homepage/homepage.component';
 import ShopPage from './pages/shop/shop.component';
 import Header from './components/header/header.component';
 import SignInAndSignUpPage from './pages/sign-in-and-sign-up/sign-in-and-sign-up.component';
-import { auth } from './firebase/firebase.utils';
+import { auth, createUserProfileDocument } from './firebase/firebase.utils';
 
 const HatsPage = () => (
   <div>
@@ -15,6 +15,8 @@ const HatsPage = () => (
 );
 
 class App extends React.Component {
+  unsubscribeFromAuth = null;
+
   constructor() {
     super();
 
@@ -25,17 +27,31 @@ class App extends React.Component {
 
   componentDidMount() {
     console.log('Hello');
-    auth.onAuthStateChanged(user => {
-      this.setState({ currentUser: user });
-      console.log(user);
+    this.unsubscribeFromAuth = auth.onAuthStateChanged(async userAuth => {
+      if (userAuth) {
+        const userRef = await createUserProfileDocument(userAuth);
+        userRef.get().then(console.log);
+        userRef.onSnapshot(snapShot => {
+          // console.log('SNAP', snapShot);
+          // console.log('SNAP', snapShot.data());
+          this.setState(
+            {
+              currentUser: {
+                id: snapShot.id,
+                ...snapShot.data()
+              }
+            },
+            () => console.log('state', this.state)
+          );
+        });
+      }
+      this.setState({ currentUser: userAuth }); // userAuth will be null
     });
   }
 
   componentWillUnmount() {
     this.unsubscribeFromAuth();
   }
-
-  unsubscribeFromAuth = () => {};
 
   render() {
     return (
